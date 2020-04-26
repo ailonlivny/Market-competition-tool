@@ -6,7 +6,12 @@ from tkinter.ttk import Progressbar
 from bs4 import BeautifulSoup
 from datetime import datetime
 from tkinter import *
-from colorama import Fore, Style
+from colorama import init, Fore, Back, Style
+from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
+from webdriver_manager.chrome import ChromeDriverManager
+
+init(convert=True)
 
 root = Tk()
 root.minsize(480, 234)
@@ -35,37 +40,62 @@ def run_app(event):
     worksheet.write('C2', 'JobID')
     worksheet.write('D2', 'Account')
     worksheet.write('E2', 'Sponsored By Pando')
-    worksheet.write('F2', 'Sponsored By indeed')
-    worksheet.write('G2', 'Date post by Indeed')
-    worksheet.write('H2', 'Sponsored By appcast')
-    worksheet.write('I2', 'Date post by appcast')
-    worksheet.write('J2', 'Posting Date')
-    worksheet.write('K2', 'Similar Pando Campaign')
-    worksheet.write('L2', 'Sourcer')
-    worksheet.write('M2', 'Sponsored indication on URL')
+    worksheet.write('F2', 'Sponsored By indeed at indeed')
+    worksheet.write('G2', 'Date post by Indeed at indeed')
+    worksheet.write('H2', 'Sponsored By appcast at indeed')
+    worksheet.write('I2', 'Date post by appcast at indeed')
+    worksheet.write('J2', 'Sponsored By indeed at Jobcase')
+    worksheet.write('K2', 'Date post by Indeed at Jobcase')
+    worksheet.write('L2', 'Sponsored By appcast at Jobcase')
+    worksheet.write('M2', 'Date post by appcast at Jobcase')
+    worksheet.write('N2', 'Sponsored By indeed at Monster')
+    worksheet.write('O2', 'Date post by Indeed at Monster')
+    worksheet.write('P2', 'Sponsored By appcast at Monster')
+    worksheet.write('Q2', 'Date post by appcast at Monster')
+    worksheet.write('R2', 'Similar Pando Campaign')
+    worksheet.write('S2', 'Sourcer')
+    worksheet.write('T2', 'Sponsored indication on URL')
 
-    indeed_posts_count = 0
-    appcast_posts_count = 0
+    sponsored_by_indeed_at_indeed_col = 5
+    sponsored_by_Indeed_at_indeed_date_col = 6
+    sponsored_by_Appcast_at_indeed_col = 7
+    sponsored_by_Appcast_at_indeed_date_col = 8
+    sponsored_by_Indeed_at_Jobcase_col = 9
+    sponsored_by_Indeed_at_Jobcase_date_col = 10
+    sponsored_by_Appcast_at_Jobcase_col = 11
+    sponsored_by_Appcast_at_Jobcase_date_col = 12
+    sponsored_by_indeed_at_Monster_col = 13
+    sponsored_by_indeed_at_Monster_date_col = 14
+    sponsored_by_Appcast_at_Monster_col = 15
+    sponsored_by_Appcast_at_Monster_date_col = 16
+
+    Indeed_at_Indeed_count = 0
+    Appcast_at_Indeed_count = 0
+    Indeed_at_Monster_count = 0
+    Appcast_at_Monster_count = 0
+    Indeed_at_Jobcase_count = 0
+    Appcast_at_Jobcase_count = 0
+
     low_val = 0
     excel_row = 2
     excel_col = 0
-    sponsored_by_indeed_col = 5
-    sponsored_by_appcast_col = 7
     URL = "https://amazon.force.com/"
-    soup = BeautifulSoup(requests.get(URL).text, "html.parser")
-    results_from_amazon_force = soup.find_all('div', attrs={'class': 'col-xs-12 col-sm-9'})
+    soup_amazon_force = BeautifulSoup(requests.get(URL).text, "html.parser")
+    results_from_amazon_force = soup_amazon_force.find_all('div', attrs={'class': 'col-xs-12 col-sm-9'})
     post_count = len(results_from_amazon_force)
-    post_index = 1
+    driver = webdriver.Chrome(executable_path=ChromeDriverManager("2.42").install())
+
     for idx, res in enumerate(results_from_amazon_force):
         job_location = res.find('span').text.strip()
+
         if "United States" in job_location:
             job_title = res.find('a').text.strip()
-            job_id_pando = res.find('strong').text.strip()
+            job_id = res.find('strong').text.strip()
             worksheet.write(excel_row, excel_col, job_title)
             excel_col += 1
             worksheet.write(excel_row, excel_col, job_location)
             excel_col += 1
-            worksheet.write(excel_row, excel_col, job_id_pando)
+            worksheet.write(excel_row, excel_col, job_id)
 
             job_title_with_pluses = job_title.split(" ")
             job_title_with_pluses = ''.join(map(str, [word + "+" for word in job_title_with_pluses]))
@@ -77,6 +107,173 @@ def run_app(event):
 
             indeed_search_job_and_location_url = f"https://www.indeed.com/jobs?q={job_title_with_pluses}&l={job_location_with_pluses}"
 
+            # job_title = "Warehouse Team Member"
+            # job_location = "Campbellsville, KY United States"
+            # job_id = "200029806"
+
+            job_title_with_hyphen = job_title.split(" ")
+            job_title_with_hyphen = ''.join(map(str, [word + "-" for word in job_title_with_hyphen]))
+            job_title_with_hyphen = job_title_with_hyphen[:len(job_title_with_hyphen) - 1]
+
+            job_location_with_hyphen = job_location.split(" ")
+            job_location_with_hyphen = ''.join(map(str, [word + "-" for word in job_location_with_hyphen]))
+            job_location_with_hyphen = job_location_with_hyphen[:len(job_location_with_hyphen) - 1]
+
+            monster_search_job_and_location_url = f"https://www.monster.com/jobs/search/?q={job_title_with_hyphen}&where={job_location_with_hyphen}"
+            # print(monster_search_job_and_location_url)
+
+            job_title_with_twenty_percentages = job_title.split(" ")
+            job_title_with_twenty_percentages = ''.join(map(str, [word + "%20" for word in job_title_with_twenty_percentages]))
+            job_title_with_twenty_percentages = job_title_with_twenty_percentages[:len(job_title_with_twenty_percentages) - 3]
+
+            job_location_with_twenty_percentages = job_location.split(" ")
+            job_location_with_twenty_percentages = ''.join(map(str, [word + "%20" for word in job_location_with_twenty_percentages]))
+            job_location_with_twenty_percentages = job_location_with_twenty_percentages[:len(job_location_with_twenty_percentages) - 3]
+
+            jobcase_search_job_and_location_url = f"https://www.jobcase.com/jobs/results?q={job_title_with_twenty_percentages}&l={job_location_with_twenty_percentages}&radius=25&sort_order=DEFAULT"
+
+            # jobcase_first_page = ""
+            # while jobcase_first_page == "":
+            #     try:
+            #         jobcase_first_page = requests.get(jobcase_search_job_and_location_url)
+            #         time.sleep(5)
+            #     except requests.exceptions.RequestException as e:
+            #         time.sleep(1)
+            #
+            # soup_search_jobs_at_jobcase = BeautifulSoup(jobcase_first_page.text, "html.parser")
+            # jobscase_posts = soup_search_jobs_at_jobcase.find_all('div', attrs={'class': 'JobResult__TextContainer'
+            #                                                                              '-tptubx-18 eGTDZv'},
+            #                                                    limit=10)
+            # print(soup_search_jobs_at_jobcase.prettify())
+            # for jobscase_post in jobscase_posts:
+            #     root.update()
+            #     jobcase_time = jobscase_post.find('div', attrs={'class': "Typography__Component-sc-1n7rekq-0 dWDyvW JobResult__JobResultTypography-tptubx-0 JobResult__DaysPosted-tptubx-7 iwYRBv"}).text.strip()
+            #     jobcase_job_title = indeed_post.find('a', attrs={'class': "Link__LinkComponent-sc-1kbt8hh-0 iRnhgS"}).text.strip()
+            #     jobcase_job_location = \
+            #         indeed_post.find("div",
+            #                          attrs={"class": "Typography__Component-sc-1n7rekq-0 dWDyvW JobResult__JobResultTypography-tptubx-0 JobResult__JobLocation-tptubx-6 jlTrOP"}).text.strip().split(
+            #             ",")[0]
+            #     print(jobcase_time + " " + jobcase_job_title + " " + jobcase_job_location)
+
+            while True:
+                try:
+                    driver.get(jobcase_search_job_and_location_url)
+                    time.sleep(6)
+                    break
+                except WebDriverException as e:
+                    time.sleep(1)
+
+            jobscase_posts = driver.find_elements_by_xpath(
+                "//div[@class='JobResult__TextContainer-tptubx-18 eGTDZv']")
+
+            for jobcase_idx, jobscase_post in enumerate(jobscase_posts):
+                root.update()
+                jobcase_time = jobscase_post.find_element_by_xpath(".//div[@class='Typography__Component-sc-1n7rekq-0 dWDyvW JobResult__JobResultTypography-tptubx-0 JobResult__DaysPosted-tptubx-7 iwYRBv']").text
+                jobcase_job_title = jobscase_post.find_element_by_xpath(".//a[@class='Link__LinkComponent-sc-1kbt8hh-0 iRnhgS']").text
+                jobcase_job_location = \
+                    jobscase_post.find_element_by_xpath(".//div[@class='Typography__Component-sc-1n7rekq-0 dWDyvW JobResult__JobResultTypography-tptubx-0 JobResult__JobLocation-tptubx-6 jlTrOP']").text.split(",")[0]
+                jobcase_company = driver.find_element_by_xpath(
+                    ".//div[@class='Typography__Component-sc-1n7rekq-0 lmhswq JobResult__JobResultCompanyTypography-tptubx-1 jXlTxF']").text
+                # print(jobcase_time + " " + jobcase_job_title + " " + jobcase_job_location + " " + jobcase_company)
+
+                if "Amazon HVH" == jobcase_company or "Workforce" in jobcase_company:
+                    if job_title in jobcase_job_title and jobcase_job_location in job_location:
+                        if "Workforce" in jobcase_company:
+                            worksheet.write(excel_row, sponsored_by_Appcast_at_Jobcase_col, "Appcast")
+                            worksheet.write(excel_row, sponsored_by_Appcast_at_Jobcase_date_col,
+                                            jobcase_time)
+                            Appcast_at_Jobcase_count += 1
+                        else:
+                            driver.find_element_by_xpath(
+                                "//a[@class='Link__LinkComponent-sc-1kbt8hh-0 iRnhgS']").click()
+                            current_window = driver.window_handles[1]
+                            window_before = driver.window_handles[0]
+                            driver.switch_to.window(current_window)
+                            driver.find_element_by_xpath(
+                                "//a[contains(text(),'Apply Now')]").click()
+
+                            landing_page_window = driver.window_handles[2]
+                            driver.switch_to.window(landing_page_window)
+                            jobcast_amazon_landing_page_id = driver.find_element_by_xpath(
+                                "//p[@class='first']").text.replace('\n',
+                                                                    '').replace(
+                                '\t', '')[8:17]
+                            if jobcast_amazon_landing_page_id == job_id:
+                                if "Amazon HVH" == jobcase_company:
+                                    worksheet.write(excel_row, sponsored_by_Indeed_at_Jobcase_col, "Indeed")
+                                    worksheet.write(excel_row, sponsored_by_Indeed_at_Jobcase_date_col,
+                                                    jobcase_time)
+                                    Indeed_at_Jobcase_count += 1
+
+                            driver.close()
+                            driver.switch_to.window(current_window)
+                            driver.close()
+                            driver.switch_to.window(window_before)
+
+                if jobcase_idx == 10:
+                    break
+
+
+            monster_first_page = ""
+            while monster_first_page == "":
+                try:
+                    monster_first_page = requests.get(monster_search_job_and_location_url)
+                except requests.exceptions.RequestException as e:
+                    time.sleep(1)
+
+            soup_search_jobs_at_monster = BeautifulSoup(monster_first_page.text, "html.parser")
+            posts_at_monster = soup_search_jobs_at_monster.find_all('div', attrs={'class': 'flex-row'},
+                                                                    limit=10)
+
+            for post_at_monster in posts_at_monster:
+
+                monster_job_title = post_at_monster.find('a')
+                if monster_job_title:
+                    monster_job_title = monster_job_title.text.strip()
+                    monster_post_company = post_at_monster.find('div', attrs={'class': 'company'}).find('span', attrs={
+                        'class': 'name'}).text.strip()
+                    monster_post_date = post_at_monster.find('time').text.strip()
+                    monster_job_location = post_at_monster.find('div', attrs={'class': 'location'}).find('span', attrs={
+                        'class': 'name'}).text.strip().split(",")[0]
+                    monster_post_url = post_at_monster.find('h2', attrs={'class': 'title'}).find('a')["href"]
+
+                    if "Amazon HVH" == monster_post_company or "Workforce" in monster_post_company:
+                        if job_title in monster_job_title and monster_job_location in job_location:
+
+                            while True:
+                                try:
+                                    driver.get(monster_post_url)
+                                    break
+                                except WebDriverException as e:
+                                    time.sleep(1)
+
+                            apply_at_amazon_button = driver.find_element_by_xpath(
+                                "//button[@class='btn job-apply-button bg-primary-lt px-4']")
+                            apply_at_amazon_button.click()
+                            current_window = driver.window_handles[1]
+                            window_before = driver.window_handles[0]
+                            driver.switch_to.window(current_window)
+                            monster_amazon_landing_page_id = driver.find_element_by_xpath(
+                                "//p[@class='first']").text.replace('\n',
+                                                                    '').replace(
+                                '\t', '')[8:17]
+
+                            if monster_amazon_landing_page_id == job_id:
+                                if "Amazon HVH" == monster_post_company:
+                                    worksheet.write(excel_row, sponsored_by_indeed_at_Monster_col, "Indeed")
+                                    worksheet.write(excel_row, sponsored_by_indeed_at_Monster_date_col,
+                                                    monster_post_date)
+                                    Indeed_at_Monster_count += 1
+
+                                if "Workforce" in monster_post_company:
+                                    worksheet.write(excel_row, sponsored_by_Appcast_at_Monster_col, "Appcast")
+                                    worksheet.write(excel_row, sponsored_by_Appcast_at_Monster_date_col,
+                                                    monster_post_date)
+                                    Appcast_at_Monster_count += 1
+
+                            driver.close()
+                            driver.switch_to.window(window_before)
+
             indeed_first_page = ""
             while indeed_first_page == "":
                 try:
@@ -84,21 +281,23 @@ def run_app(event):
                 except requests.exceptions.RequestException as e:
                     time.sleep(1)
 
-            soup = BeautifulSoup(indeed_first_page.text, "html.parser")
-            indeed_posts = soup.find_all('div', attrs={'data-tn-component': 'organicJob'}, limit=10)
-            app_cast_posts = soup.find_all('div', attrs={'data-empn': '7058506697514818'}, limit=10)
+            soup_search_jobs_at_indeed = BeautifulSoup(indeed_first_page.text, "html.parser")
+            indeed_posts = soup_search_jobs_at_indeed.find_all('div', attrs={'data-tn-component': 'organicJob'},
+                                                               limit=10)
+            app_cast_posts = soup_search_jobs_at_indeed.find_all('div', attrs={'data-empn': '7058506697514818'},
+                                                                 limit=10)
 
             for indeed_post in indeed_posts:
                 root.update()
                 indeed_time = indeed_post.find('span', attrs={'class': "date"}).text.strip()
-                indeed_job = indeed_post.find('a', attrs={'data-tn-element': "jobTitle"})
+                indeed_job_title = indeed_post.find('a', attrs={'data-tn-element': "jobTitle"}).text.strip()
                 indeed_url = indeed_post.find('a', attrs={'data-tn-element': "jobTitle"})["href"]
-                indeed_location = \
+                indeed_job_location = \
                     indeed_post.find("span",
                                      attrs={"class": "location accessible-contrast-color-location"}).text.strip().split(
                         ",")[0]
 
-                if job_title in indeed_job.text.strip() and indeed_location in job_location:
+                if job_title in indeed_job_title and indeed_job_location in job_location:
                     indeed_sec_page = ""
                     while indeed_sec_page == "":
                         try:
@@ -106,8 +305,8 @@ def run_app(event):
                         except requests.exceptions.RequestException as e:
                             time.sleep(1)
 
-                    soup2 = BeautifulSoup(indeed_sec_page.text, "html.parser")
-                    indeed_third_page = soup2.find("span", attrs={"id": "originalJobLinkContainer"})
+                    soup_second_page_indeed = BeautifulSoup(indeed_sec_page.text, "html.parser")
+                    indeed_third_page = soup_second_page_indeed.find("span", attrs={"id": "originalJobLinkContainer"})
                     if indeed_third_page:
                         indeed_third_page = indeed_third_page.find('a')["href"]
                     else:
@@ -120,14 +319,14 @@ def run_app(event):
                         except requests.exceptions.RequestException as e:
                             time.sleep(1)
 
-                    soup3 = BeautifulSoup(amazon_landing_page.text, "html.parser")
-                    job_id_amazon = soup3.find("div", attrs={"class": "details-line"})
+                    soup_amazon_landing_page = BeautifulSoup(amazon_landing_page.text, "html.parser")
+                    job_id_amazon = soup_amazon_landing_page.find("div", attrs={"class": "details-line"})
                     if job_id_amazon:
                         job_id_amazon = job_id_amazon.find("p").text.replace('\n', '').replace('\t', '')[7:16]
-                    if job_id_pando == job_id_amazon:
-                        worksheet.write(excel_row, sponsored_by_indeed_col, "indeed")
-                        worksheet.write(excel_row, sponsored_by_indeed_col + 1, indeed_time)
-                        indeed_posts_count += 1
+                    if job_id == job_id_amazon:
+                        worksheet.write(excel_row, sponsored_by_indeed_at_indeed_col, "Indeed")
+                        worksheet.write(excel_row, sponsored_by_Indeed_at_indeed_date_col, indeed_time)
+                        Indeed_at_Indeed_count += 1
                         break
 
             for app_cast_post in app_cast_posts:
@@ -137,10 +336,10 @@ def run_app(event):
                     "class": "location accessible-contrast-color-location"}).text.strip().split(",")[0]
                 if ("Workforce" in company_name) and (job_title in app_cast_job) and (
                         app_cast_location in job_location):
-                    appcast_time = app_cast_post.find('span', attrs={'class': "date"}).text.strip()
-                    worksheet.write(excel_row, sponsored_by_appcast_col, "Appcast")
-                    worksheet.write(excel_row, sponsored_by_appcast_col + 1, appcast_time)
-                    appcast_posts_count += 1
+                    appcast_date = app_cast_post.find('span', attrs={'class': "date"}).text.strip()
+                    worksheet.write(excel_row, sponsored_by_Appcast_at_indeed_col, "Appcast")
+                    worksheet.write(excel_row, sponsored_by_Appcast_at_indeed_date_col, appcast_date)
+                    Appcast_at_Indeed_count += 1
                     break
 
             root.update()
@@ -148,8 +347,9 @@ def run_app(event):
             excel_row += 1
 
         percentage_till_now = math.floor(percentage(idx, post_count))
+
         print(
-            Fore.BLUE + f"Work process -> {percentage_till_now}%, " + Fore.YELLOW + f"Indeed = {indeed_posts_count}, " + Fore.RED + f"Appcast = {appcast_posts_count}")
+            Fore.CYAN + f"Work process -> {percentage_till_now}%, " + Fore.YELLOW + f"Sponsored at Indeed By: Indeed = {Indeed_at_Indeed_count}, Appcast = {Appcast_at_Indeed_count}, " + Fore.RED + f"Sponsored at Monster By: Indeed = {Indeed_at_Monster_count}, Appcast = {Appcast_at_Monster_count}, " + Fore.LIGHTCYAN_EX + f"Sponsored at jobcast By Indeed= {Indeed_at_Jobcase_count}, Appcast = {Appcast_at_Jobcase_count}")
 
         if low_val <= percentage_till_now:
             low_val += 10
