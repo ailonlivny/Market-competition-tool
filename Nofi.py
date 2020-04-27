@@ -1,4 +1,5 @@
 import math
+import threading
 import time
 import xlsxwriter
 import requests
@@ -8,7 +9,7 @@ from datetime import datetime
 from tkinter import *
 from colorama import init, Fore, Back, Style
 from selenium import webdriver
-from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import WebDriverException, NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
 
 init(convert=True)
@@ -26,9 +27,13 @@ def percentage(part, whole):
     return 100 * float(part) / float(whole)
 
 
-def run_app(event):
+def init_logic_thread(event):
+    logic_thread = threading.Thread(target=run)
+    logic_thread.start()
+
+
+def run():
     button_1.config(text="Running")
-    root.update()
 
     now = datetime.now()
     dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
@@ -79,8 +84,8 @@ def run_app(event):
     low_val = 0
     excel_row = 2
     excel_col = 0
-    URL = "https://amazon.force.com/"
-    soup_amazon_force = BeautifulSoup(requests.get(URL).text, "html.parser")
+    amazon_force_URL = "https://amazon.force.com/"
+    soup_amazon_force = BeautifulSoup(requests.get(amazon_force_URL).text, "html.parser")
     results_from_amazon_force = soup_amazon_force.find_all('div', attrs={'class': 'col-xs-12 col-sm-9'})
     post_count = len(results_from_amazon_force)
     driver = webdriver.Chrome(executable_path=ChromeDriverManager("2.42").install())
@@ -120,98 +125,96 @@ def run_app(event):
             job_location_with_hyphen = job_location_with_hyphen[:len(job_location_with_hyphen) - 1]
 
             monster_search_job_and_location_url = f"https://www.monster.com/jobs/search/?q={job_title_with_hyphen}&where={job_location_with_hyphen}"
-            # print(monster_search_job_and_location_url)
 
             job_title_with_twenty_percentages = job_title.split(" ")
-            job_title_with_twenty_percentages = ''.join(map(str, [word + "%20" for word in job_title_with_twenty_percentages]))
-            job_title_with_twenty_percentages = job_title_with_twenty_percentages[:len(job_title_with_twenty_percentages) - 3]
+            job_title_with_twenty_percentages = ''.join(
+                map(str, [word + "%20" for word in job_title_with_twenty_percentages]))
+            job_title_with_twenty_percentages = job_title_with_twenty_percentages[
+                                                :len(job_title_with_twenty_percentages) - 3]
 
             job_location_with_twenty_percentages = job_location.split(" ")
-            job_location_with_twenty_percentages = ''.join(map(str, [word + "%20" for word in job_location_with_twenty_percentages]))
-            job_location_with_twenty_percentages = job_location_with_twenty_percentages[:len(job_location_with_twenty_percentages) - 3]
+            job_location_with_twenty_percentages = ''.join(
+                map(str, [word + "%20" for word in job_location_with_twenty_percentages]))
+            job_location_with_twenty_percentages = job_location_with_twenty_percentages[
+                                                   :len(job_location_with_twenty_percentages) - 3]
 
             jobcase_search_job_and_location_url = f"https://www.jobcase.com/jobs/results?q={job_title_with_twenty_percentages}&l={job_location_with_twenty_percentages}&radius=25&sort_order=DEFAULT"
 
-            # jobcase_first_page = ""
-            # while jobcase_first_page == "":
-            #     try:
-            #         jobcase_first_page = requests.get(jobcase_search_job_and_location_url)
-            #         time.sleep(5)
-            #     except requests.exceptions.RequestException as e:
-            #         time.sleep(1)
-            #
-            # soup_search_jobs_at_jobcase = BeautifulSoup(jobcase_first_page.text, "html.parser")
-            # jobscase_posts = soup_search_jobs_at_jobcase.find_all('div', attrs={'class': 'JobResult__TextContainer'
-            #                                                                              '-tptubx-18 eGTDZv'},
-            #                                                    limit=10)
-            # print(soup_search_jobs_at_jobcase.prettify())
-            # for jobscase_post in jobscase_posts:
-            #     root.update()
-            #     jobcase_time = jobscase_post.find('div', attrs={'class': "Typography__Component-sc-1n7rekq-0 dWDyvW JobResult__JobResultTypography-tptubx-0 JobResult__DaysPosted-tptubx-7 iwYRBv"}).text.strip()
-            #     jobcase_job_title = indeed_post.find('a', attrs={'class': "Link__LinkComponent-sc-1kbt8hh-0 iRnhgS"}).text.strip()
-            #     jobcase_job_location = \
-            #         indeed_post.find("div",
-            #                          attrs={"class": "Typography__Component-sc-1n7rekq-0 dWDyvW JobResult__JobResultTypography-tptubx-0 JobResult__JobLocation-tptubx-6 jlTrOP"}).text.strip().split(
-            #             ",")[0]
-            #     print(jobcase_time + " " + jobcase_job_title + " " + jobcase_job_location)
-
             while True:
                 try:
-                    driver.get(jobcase_search_job_and_location_url)
-                    time.sleep(6)
+
+                    while True:
+                        try:
+                            driver.get(jobcase_search_job_and_location_url)
+                            time.sleep(5)  # 5 sec is the max time for the page to upload
+                            break
+                        except WebDriverException as e:
+                            time.sleep(1)
+
+                    jobscase_posts = driver.find_elements_by_xpath(
+                        "//div[@class='JobResult__TextContainer-tptubx-18 eGTDZv']")  # Info post wrap by this div
+
+                    is_Appcast_sponsored = False
+                    is_indeed_sponsored = False
+
+                    for jobcase_idx, jobscase_post in enumerate(jobscase_posts):
+                        jobcase_time = jobscase_post.find_element_by_xpath(
+                            ".//div[@class='Typography__Component-sc-1n7rekq-0 dWDyvW JobResult__JobResultTypography-tptubx-0 JobResult__DaysPosted-tptubx-7 iwYRBv']").text
+                        jobcase_job_title = jobscase_post.find_element_by_xpath(
+                            ".//a[@class='Link__LinkComponent-sc-1kbt8hh-0 iRnhgS']").text
+                        jobcase_job_location = \
+                            jobscase_post.find_element_by_xpath(
+                                ".//div[@class='Typography__Component-sc-1n7rekq-0 dWDyvW JobResult__JobResultTypography-tptubx-0 JobResult__JobLocation-tptubx-6 jlTrOP']").text.split(
+                                ",")[0]
+                        jobcase_company = jobscase_post.find_element_by_xpath(
+                            ".//div[@class='Typography__Component-sc-1n7rekq-0 lmhswq JobResult__JobResultCompanyTypography-tptubx-1 jXlTxF']").text
+                        if "Amazon HVH" == jobcase_company or "Workforce" in jobcase_company:
+                            if job_title in jobcase_job_title and jobcase_job_location in job_location:
+                                if "Workforce" in jobcase_company:
+                                    worksheet.write(excel_row, sponsored_by_Appcast_at_Jobcase_col, "Appcast")
+                                    worksheet.write(excel_row, sponsored_by_Appcast_at_Jobcase_date_col,
+                                                    jobcase_time)
+                                    Appcast_at_Jobcase_count += 1
+                                    is_Appcast_sponsored = True
+                                elif "Amazon HVH" == jobcase_company:
+                                    driver.find_element_by_xpath(
+                                        "//a[@class='Link__LinkComponent-sc-1kbt8hh-0 iRnhgS']").click()
+                                    current_window = driver.window_handles[1]
+                                    window_before = driver.window_handles[0]
+                                    driver.switch_to.window(current_window)
+                                    driver.find_element_by_xpath(
+                                        "//a[contains(text(),'Apply')]").click()
+
+                                    try:  # End case for URL is down at landing page
+
+                                        landing_page_window = driver.window_handles[2]
+                                        driver.switch_to.window(landing_page_window)
+                                        jobcast_amazon_landing_page_id = driver.find_element_by_xpath(
+                                            "//p[@class='first']").text.replace('\n',
+                                                                                '').replace(
+                                            '\t', '')[8:17]
+                                        if jobcast_amazon_landing_page_id == job_id:
+                                            if "Amazon HVH" == jobcase_company:
+                                                worksheet.write(excel_row, sponsored_by_Indeed_at_Jobcase_col, "Indeed")
+                                                worksheet.write(excel_row, sponsored_by_Indeed_at_Jobcase_date_col,
+                                                                jobcase_time)
+                                                Indeed_at_Jobcase_count += 1
+                                                is_indeed_sponsored = True
+                                    except NoSuchElementException:
+                                        pass
+
+                                    driver.close()
+                                    driver.switch_to.window(current_window)
+                                    driver.close()
+                                    driver.switch_to.window(window_before)
+
+                        if jobcase_idx == 30 or (is_indeed_sponsored and is_Appcast_sponsored):
+                            break
                     break
                 except WebDriverException as e:
                     time.sleep(1)
+                    driver = webdriver.Chrome(executable_path=ChromeDriverManager("2.42").install())
 
-            jobscase_posts = driver.find_elements_by_xpath(
-                "//div[@class='JobResult__TextContainer-tptubx-18 eGTDZv']")
-
-            for jobcase_idx, jobscase_post in enumerate(jobscase_posts):
-                root.update()
-                jobcase_time = jobscase_post.find_element_by_xpath(".//div[@class='Typography__Component-sc-1n7rekq-0 dWDyvW JobResult__JobResultTypography-tptubx-0 JobResult__DaysPosted-tptubx-7 iwYRBv']").text
-                jobcase_job_title = jobscase_post.find_element_by_xpath(".//a[@class='Link__LinkComponent-sc-1kbt8hh-0 iRnhgS']").text
-                jobcase_job_location = \
-                    jobscase_post.find_element_by_xpath(".//div[@class='Typography__Component-sc-1n7rekq-0 dWDyvW JobResult__JobResultTypography-tptubx-0 JobResult__JobLocation-tptubx-6 jlTrOP']").text.split(",")[0]
-                jobcase_company = driver.find_element_by_xpath(
-                    ".//div[@class='Typography__Component-sc-1n7rekq-0 lmhswq JobResult__JobResultCompanyTypography-tptubx-1 jXlTxF']").text
-                # print(jobcase_time + " " + jobcase_job_title + " " + jobcase_job_location + " " + jobcase_company)
-
-                if "Amazon HVH" == jobcase_company or "Workforce" in jobcase_company:
-                    if job_title in jobcase_job_title and jobcase_job_location in job_location:
-                        if "Workforce" in jobcase_company:
-                            worksheet.write(excel_row, sponsored_by_Appcast_at_Jobcase_col, "Appcast")
-                            worksheet.write(excel_row, sponsored_by_Appcast_at_Jobcase_date_col,
-                                            jobcase_time)
-                            Appcast_at_Jobcase_count += 1
-                        else:
-                            driver.find_element_by_xpath(
-                                "//a[@class='Link__LinkComponent-sc-1kbt8hh-0 iRnhgS']").click()
-                            current_window = driver.window_handles[1]
-                            window_before = driver.window_handles[0]
-                            driver.switch_to.window(current_window)
-                            driver.find_element_by_xpath(
-                                "//a[contains(text(),'Apply Now')]").click()
-
-                            landing_page_window = driver.window_handles[2]
-                            driver.switch_to.window(landing_page_window)
-                            jobcast_amazon_landing_page_id = driver.find_element_by_xpath(
-                                "//p[@class='first']").text.replace('\n',
-                                                                    '').replace(
-                                '\t', '')[8:17]
-                            if jobcast_amazon_landing_page_id == job_id:
-                                if "Amazon HVH" == jobcase_company:
-                                    worksheet.write(excel_row, sponsored_by_Indeed_at_Jobcase_col, "Indeed")
-                                    worksheet.write(excel_row, sponsored_by_Indeed_at_Jobcase_date_col,
-                                                    jobcase_time)
-                                    Indeed_at_Jobcase_count += 1
-
-                            driver.close()
-                            driver.switch_to.window(current_window)
-                            driver.close()
-                            driver.switch_to.window(window_before)
-
-                if jobcase_idx == 10:
-                    break
 
 
             monster_first_page = ""
@@ -226,7 +229,6 @@ def run_app(event):
                                                                     limit=10)
 
             for post_at_monster in posts_at_monster:
-
                 monster_job_title = post_at_monster.find('a')
                 if monster_job_title:
                     monster_job_title = monster_job_title.text.strip()
@@ -239,40 +241,44 @@ def run_app(event):
 
                     if "Amazon HVH" == monster_post_company or "Workforce" in monster_post_company:
                         if job_title in monster_job_title and monster_job_location in job_location:
+                            if "Workforce" in monster_post_company:
+                                worksheet.write(excel_row, sponsored_by_Appcast_at_Monster_col, "Appcast")
+                                worksheet.write(excel_row, sponsored_by_Appcast_at_Monster_date_col,
+                                                monster_post_date)
+                                Appcast_at_Monster_count += 1
+                            elif "Amazon HVH" == monster_post_company:
+                                while True:
+                                    try:
+                                        driver.get(monster_post_url)
+                                        time.sleep(5)
+                                        break
+                                    except WebDriverException as e:
+                                        time.sleep(1)
 
-                            while True:
-                                try:
-                                    driver.get(monster_post_url)
-                                    break
-                                except WebDriverException as e:
-                                    time.sleep(1)
+                                apply_at_amazon_button = driver.find_element_by_xpath(
+                                    "//button[@class='btn job-apply-button bg-primary-lt px-4']")
+                                apply_at_amazon_button.click()
+                                current_window = driver.window_handles[1]
+                                window_before = driver.window_handles[0]
+                                driver.switch_to.window(current_window)
 
-                            apply_at_amazon_button = driver.find_element_by_xpath(
-                                "//button[@class='btn job-apply-button bg-primary-lt px-4']")
-                            apply_at_amazon_button.click()
-                            current_window = driver.window_handles[1]
-                            window_before = driver.window_handles[0]
-                            driver.switch_to.window(current_window)
-                            monster_amazon_landing_page_id = driver.find_element_by_xpath(
-                                "//p[@class='first']").text.replace('\n',
-                                                                    '').replace(
-                                '\t', '')[8:17]
+                                try:  # End case for URL is down at landing page
+                                    monster_amazon_landing_page_id = driver.find_element_by_xpath(
+                                        "//p[@class='first']").text.replace('\n',
+                                                                            '').replace(
+                                        '\t', '')[8:17]
 
-                            if monster_amazon_landing_page_id == job_id:
-                                if "Amazon HVH" == monster_post_company:
-                                    worksheet.write(excel_row, sponsored_by_indeed_at_Monster_col, "Indeed")
-                                    worksheet.write(excel_row, sponsored_by_indeed_at_Monster_date_col,
-                                                    monster_post_date)
-                                    Indeed_at_Monster_count += 1
+                                    if monster_amazon_landing_page_id == job_id:
+                                        worksheet.write(excel_row, sponsored_by_indeed_at_Monster_col, "Indeed")
+                                        worksheet.write(excel_row, sponsored_by_indeed_at_Monster_date_col,
+                                                        monster_post_date)
+                                        Indeed_at_Monster_count += 1
 
-                                if "Workforce" in monster_post_company:
-                                    worksheet.write(excel_row, sponsored_by_Appcast_at_Monster_col, "Appcast")
-                                    worksheet.write(excel_row, sponsored_by_Appcast_at_Monster_date_col,
-                                                    monster_post_date)
-                                    Appcast_at_Monster_count += 1
+                                except NoSuchElementException:
+                                    pass
 
-                            driver.close()
-                            driver.switch_to.window(window_before)
+                                driver.close()
+                                driver.switch_to.window(window_before)
 
             indeed_first_page = ""
             while indeed_first_page == "":
@@ -288,7 +294,6 @@ def run_app(event):
                                                                  limit=10)
 
             for indeed_post in indeed_posts:
-                root.update()
                 indeed_time = indeed_post.find('span', attrs={'class': "date"}).text.strip()
                 indeed_job_title = indeed_post.find('a', attrs={'data-tn-element': "jobTitle"}).text.strip()
                 indeed_url = indeed_post.find('a', attrs={'data-tn-element': "jobTitle"})["href"]
@@ -342,7 +347,6 @@ def run_app(event):
                     Appcast_at_Indeed_count += 1
                     break
 
-            root.update()
             excel_col = 0
             excel_row += 1
 
@@ -358,11 +362,13 @@ def run_app(event):
 
     workbook.close()
     button_1.config(text="Finished")
-    root.update()
-
+    driver.quit()
+    print(
+        Fore.LIGHTCYAN_EX + "Done!" + Fore.RED + " Done!" + Fore.YELLOW + " Done!" + Fore.CYAN + " Done!")
 
 button_1 = Button(root, text="Start", fg="blue", height=4,
                   width=15)
-button_1.bind("<Button-1>", run_app)
+button_1.bind("<Button-1>", init_logic_thread)
 button_1.pack()
 root.mainloop()
+
